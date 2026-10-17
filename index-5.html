@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เรียนกีต้าร์ออนไลน์</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff8f0;--card:#fff;--ink:#2b2118;--mut:#7a6a5a;--ac:#d9480f;--ln:#e6d8c8;--dot:#d9480f}
+@media(prefers-color-scheme:dark){:root{--bg:#1c1713;--card:#2a231d;--ink:#f5ebe0;--mut:#b9a994;--ac:#ff8a4c;--ln:#4a3e33;--dot:#ff8a4c}}
+*{box-sizing:border-box}
+body{margin:0;font-family:Sarabun,system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+header{padding:28px 16px 8px;text-align:center}
+h1{margin:0;font-size:1.9rem}header p{color:var(--mut);margin:4px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:16px;max-width:900px;margin:auto}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:16px;cursor:pointer;text-align:left;font:inherit;color:inherit;position:relative}
+.card:hover{border-color:var(--ac)}
+.card b{display:block;font-size:1.05rem}.card span{color:var(--mut);font-size:.88rem}
+.card i{font-style:normal;font-size:1.8rem;display:block}
+.done{position:absolute;top:10px;right:12px;color:#2f9e44;font-weight:700}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:9;align-items:flex-end;justify-content:center}
+#modal.on{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:820px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px 40px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.top h2{margin:0}
+.x{border:0;background:var(--card);color:var(--ink);border-radius:50%;width:38px;height:38px;font-size:1.2rem;cursor:pointer}
+h3{margin:22px 0 6px;color:var(--ac)}
+table{border-collapse:collapse;width:100%;font-size:.92rem;display:block;overflow-x:auto}
+td,th{border:1px solid var(--ln);padding:6px 8px;text-align:center;white-space:nowrap}
+th{background:var(--card)}
+.box{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:12px;margin:10px 0}
+.warn{border-left:4px solid var(--ac)}
+.chords{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.ch{background:var(--card);border:1px solid var(--ln);border-radius:10px;text-align:center;padding:6px}
+.ch b{display:block}.ch small{color:var(--mut)}
+select,input,textarea,button.b{font:inherit;padding:8px;border-radius:8px;border:1px solid var(--ln);background:var(--card);color:var(--ink)}
+button.b{background:var(--ac);color:#fff;border:0;cursor:pointer}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.scroll{overflow-x:auto}
+.cmp{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+svg text{fill:var(--ink);font-family:Sarabun,sans-serif}
+.mark{margin-top:18px;display:flex;align-items:center;gap:8px}
+ul{padding-left:20px}
+</style>
+</head>
+<body>
+<header><h1>🎸 เรียนกีต้าร์</h1><p>เลือกหัวข้อที่อยากรู้ได้เลย</p><p id="who" style="font-size:.8rem"></p></header>
+<div class="grid" id="menu"></div>
+<div id="modal"><div class="sheet" id="sheet"></div></div>
+
+<script type="module">
+/* ============ Firebase (ใส่ config ของคุณ ถ้าไม่ใส่จะเก็บใน localStorage) ============ */
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,doc,getDoc,setDoc,collection,addDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const firebaseConfig={apiKey:"YOUR_API_KEY",authDomain:"YOUR_PROJECT.firebaseapp.com",projectId:"YOUR_PROJECT",appId:"YOUR_APP_ID"};
+let db=null,uid=null,progress=JSON.parse(localStorage.getItem('gp')||'{}');
+if(!firebaseConfig.apiKey.startsWith("YOUR")){
+  try{
+    const app=initializeApp(firebaseConfig),auth=getAuth(app);db=getFirestore(app);
+    const c=await signInAnonymously(auth);uid=c.user.uid;
+    const s=await getDoc(doc(db,'users',uid));
+    if(s.exists())progress={...progress,...s.data().progress};
+    document.getElementById('who').textContent='☁️ บันทึกความคืบหน้าออนไลน์แล้ว';
+  }catch(e){console.warn(e)}
+}
+async function save(){
+  localStorage.setItem('gp',JSON.stringify(progress));
+  if(db&&uid)try{await setDoc(doc(db,'users',uid),{progress,updatedAt:serverTimestamp()})}catch(e){console.warn(e)}
+}
+
+/* ============ ข้อมูลพื้นฐาน ============ */
+const N=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const OPEN={std:[4,9,2,7,11,4],dropd:[2,9,2,7,11,4]};
+const CH={C:[-1,3,2,0,1,0],D:[-1,-1,0,2,3,2],E:[0,2,2,1,0,0],G:[3,2,0,0,0,3],A:[-1,0,2,2,2,0],
+Am:[-1,0,2,2,1,0],Dm:[-1,-1,0,2,3,1],Em:[0,2,2,0,0,0],F:[1,3,3,2,1,1],Bm:[-1,2,4,4,3,2],
+A7:[-1,0,2,0,2,0],E7:[0,2,0,1,0,0],G7:[3,2,0,0,0,1],C7:[-1,3,2,3,1,0],D7:[-1,-1,0,2,1,2]};
+const SC={'เมเจอร์ (Major)':[0,2,4,5,7,9,11],'ไมเนอร์ (Natural Minor)':[0,2,3,5,7,8,10],
+'เพนทาโทนิกไมเนอร์':[0,3,5,7,10],'เพนทาโทนิกเมเจอร์':[0,2,4,7,9],'บลูส์':[0,3,5,6,7,10],'โดเรียน (Dorian)':[0,2,3,5,7,9,10]};
+const TUN=[['มาตรฐาน','E A D G B E','—'],['ลงครึ่งเสียง (Half-step down)','Eb Ab Db Gb Bb Eb','ใช้ทรงคอร์ดเดิมได้เลย เสียงต่ำลง'],
+['ลงหนึ่งเสียง (Full-step down)','D G C F A D','ใช้ทรงเดิม เสียงต่ำลง 1 เสียง'],['Drop D','D A D G B E','สาย 6 ลง 1 เสียง → เฟร็ตสาย 6 ต้อง +2'],
+['Drop C','C G C F A D','Drop D แล้วลงทั้งหมดอีก 1 เสียง ทรงเหมือน Drop D'],['DADGAD','D A D G A D','ทรงคอร์ดเปลี่ยนเกือบทั้งหมด ใช้ในโฟล์ค/ฟิงเกอร์สไตล์'],
+['Open G','D G D G B D','ทาบนิ้วเดียวทุกสายได้คอร์ด G (สไลด์/บลูส์)'],['Open D','D A D F# A D','ทาบนิ้วเดียวได้คอร์ด D']];
+
+/* ============ ตัววาด SVG ============ */
+function chordSVG(f){
+  const pos=f.filter(x=>x>0),mx=Math.max(0,...pos),mn=pos.length?Math.min(...pos):1,base=mx>4?mn:1;
+  let s=`<svg viewBox="0 0 100 120" width="100%" style="max-width:110px">`;
+  for(let i=0;i<6;i++)s+=`<line x1="${15+i*14}" y1="25" x2="${15+i*14}" y2="105" stroke="currentColor" stroke-width="1"/>`;
+  for(let j=0;j<=4;j++)s+=`<line x1="15" y1="${25+j*20}" x2="85" y2="${25+j*20}" stroke="currentColor" stroke-width="${j==0&&base==1?3:1}"/>`;
+  if(base>1)s+=`<text x="1" y="40" font-size="9">${base}</text>`;
+  f.forEach((v,i)=>{const x=15+i*14;
+    if(v==-1)s+=`<text x="${x}" y="18" font-size="11" text-anchor="middle">✕</text>`;
+    else if(v==0)s+=`<circle cx="${x}" cy="14" r="4" fill="none" stroke="currentColor"/>`;
+    else s+=`<circle cx="${x}" cy="${25+(v-base+0.5)*20}" r="6" fill="var(--dot)"/>`;});
+  return s+'</svg>';
+}
+function fretboard(label,rootNote){
+  const W=48,L=34;let s=`<svg viewBox="0 0 ${L+13*W+6} 200" width="${L+13*W+6}" height="200">`;
+  for(let f=0;f<=12;f++)s+=`<line x1="${L+f*W}" y1="20" x2="${L+f*W}" y2="170" stroke="currentColor" stroke-width="${f==0?4:1}" opacity="${f==0?1:.5}"/>`;
+  for(let f=1;f<=12;f++)if([3,5,7,9,12].includes(f))s+=`<text x="${L+(f-.5)*W}" y="192" font-size="12" text-anchor="middle" opacity=".6">${f}</text>`;
+  for(let r=0;r<6;r++){const y=20+r*30,i=5-r;s+=`<line x1="${L}" y1="${y}" x2="${L+12*W}" y2="${y}" stroke="currentColor" stroke-width="${1+i*.3}" opacity=".7"/>`;
+    for(let f=0;f<=12;f++){const n=(O[i]+f)%12,t=label(n);if(t==null)continue;const x=f==0?L-14:L+(f-.5)*W,root=n==rootNote;
+      s+=`<circle cx="${x}" cy="${y}" r="11" fill="${root?'var(--dot)':'var(--card)'}" stroke="var(--dot)"/><text x="${x}" y="${y+4}" font-size="10" text-anchor="middle" style="fill:${root?'#fff':'var(--ink)'}">${t}</text>`;}}
+  return s+'</svg>';
+}
+let O=OPEN.std;
+
+/* ============ เนื้อหา ============ */
+const opts=a=>a.map(x=>`<option>${x}</option>`).join('');
+const S=[
+{id:'notes',i:'🎼',t:'โน้ตบนฟิงเกอร์บอร์ด',d:'ชื่อโน้ตทุกเฟร็ต',h:()=>{O=OPEN.std;return `
+<p>สายเปล่าจากสาย 6 → 1 คือ <b>E A D G B E</b> (จำว่า "Eddie Ate Dynamite, Good Bye Eddie") แต่ละเฟร็ตที่เพิ่มขึ้นสูงขึ้น <b>ครึ่งเสียง (semitone)</b></p>
+<div class="scroll">${fretboard(n=>N[n])}</div><small>บนสุด = สาย 1 (E เล็ก) ล่างสุด = สาย 6 (E หนา)</small>
+<h3>ลำดับโน้ต 12 ตัว</h3><div class="box">C – C# – D – D# – E – F – F# – G – G# – A – A# – B – (วนกลับ C)<br>
+<b>E–F</b> และ <b>B–C</b> ห่างกันแค่ครึ่งเสียง (ไม่มี # คั่น) นอกนั้นห่างหนึ่งเสียง (2 เฟร็ต)</div>
+<h3>เคล็ดลับจำ</h3><ul><li>เฟร็ต 12 = โน้ตเดิมสูงขึ้น 1 อ็อกเทฟ</li><li>สาย 6 กับสาย 1 ชื่อโน้ตเหมือนกัน</li><li>จำสาย 6 และสาย 5 ให้แม่น ใช้หารากคอร์ดและพาวเวอร์คอร์ดได้ทันที</li><li>สาย 5 เฟร็ตเดียวกับสาย 6 บวก 5 เฟร็ต (หรือสาย 4 ถอยไป 2 เฟร็ตเมื่อลงมาสาย 3 ยกเว้นสาย 3→2 ที่ลบ 4)</li></ul>`}},
+
+{id:'chords',i:'✋',t:'คอร์ดพื้นฐาน',d:'รูปจับ 15 คอร์ด',h:()=>`
+<p>อ่านแผนภาพ: ซ้าย = สาย 6 ขวา = สาย 1, ✕ = ไม่ดีด, ○ = สายเปล่า, จุด = ตำแหน่งนิ้ว</p>
+<div class="chords">${Object.entries(CH).map(([k,v])=>`<div class="ch"><b>${k}</b>${chordSVG(v)}<small>${v.map(x=>x<0?'x':x).join(' ')}</small></div>`).join('')}</div>
+<h3>เทคนิคฝึกจับ</h3><ul><li>กดใกล้เฟร็ตด้านซ้ายของช่อง ไม่ใช่กลางช่อง</li><li>ใช้ปลายนิ้ว ตัดเล็บมือซ้ายให้สั้น</li><li>ฝึกเปลี่ยนคอร์ดคู่ เช่น G→C, Am→Em, D→A ครั้งละ 1 นาที</li><li>คอร์ดที่ใช้บ่อย 4 ตัว <b>G C D Em</b> เล่นได้เป็นร้อยเพลง</li></ul>`},
+
+{id:'theory',i:'📚',t:'ทฤษฎีดนตรีพื้นฐาน',d:'สเกล คอร์ด คีย์ อินเทอร์วัล',h:()=>`
+<h3>สูตรสเกลเมเจอร์</h3><div class="box">ระยะห่าง: <b>เต็ม–เต็ม–ครึ่ง–เต็ม–เต็ม–เต็ม–ครึ่ง</b> (W W H W W W H)<br>C Major = C D E F G A B</div>
+<h3>คอร์ดสร้างจากอะไร</h3><ul><li><b>เมเจอร์</b> = 1 – 3 – 5 (C = C E G)</li><li><b>ไมเนอร์</b> = 1 – ♭3 – 5 (Cm = C E♭ G)</li><li><b>เซเว่น (7)</b> = 1 – 3 – 5 – ♭7</li><li><b>พาวเวอร์คอร์ด (5)</b> = 1 – 5 ไม่มีเมเจอร์/ไมเนอร์</li></ul>
+<h3>คอร์ดในคีย์เมเจอร์</h3><table><tr><th>ขั้น</th><th>I</th><th>ii</th><th>iii</th><th>IV</th><th>V</th><th>vi</th><th>vii°</th></tr>
+<tr><td>คีย์ C</td><td>C</td><td>Dm</td><td>Em</td><td>F</td><td>G</td><td>Am</td><td>Bdim</td></tr>
+<tr><td>คีย์ G</td><td>G</td><td>Am</td><td>Bm</td><td>C</td><td>D</td><td>Em</td><td>F#dim</td></tr>
+<tr><td>คีย์ D</td><td>D</td><td>Em</td><td>F#m</td><td>G</td><td>A</td><td>Bm</td><td>C#dim</td></tr></table>
+<h3>โปรเกรสชันยอดนิยม</h3><ul><li>I – V – vi – IV (C G Am F)</li><li>I – IV – V (C F G)</li><li>ii – V – I (Dm G C)</li><li>vi – IV – I – V (Am F C G)</li></ul>
+<h3>จังหวะ</h3><div class="box">4/4 นับ 1 2 3 4 · ตัวอย่างสตรัม: <b>↓ ↓↑ ↑↓↑</b> (D DU UDU) เริ่มช้า ๆ ใช้เมโทรนอม 60 BPM ก่อน</div>`},
+
+{id:'tuning',i:'🔧',t:'ตั้งสาย & ดรอป',d:'Drop D, ดาวน์จูน, วิธีเปลี่ยนทรงคอร์ด',h:()=>`
+<h3>การตั้งสายที่นิยม</h3><table><tr><th>ชื่อ</th><th>สาย 6→1</th><th>ผลต่อการจับ</th></tr>${TUN.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td style="white-space:normal;text-align:left">${r[2]}</td></tr>`).join('')}</table>
+<h3>Drop D เปลี่ยนการจับยังไง?</h3>
+<div class="box">สาย 6 ลดจาก E เป็น D (ต่ำลง 2 เฟร็ต) สาย 5–1 เหมือนเดิม<br>กฎ: <b>ถ้าคอร์ดมีสาย 6 ให้เฟร็ตสาย 6 + 2</b> (สายเปล่า → เฟร็ต 2)<br>
+คอร์ดที่มี ✕ ที่สาย 6 จับเหมือนเดิมได้ และ D / Dm ดีดสาย 6 เปล่าได้เลย<br><b>พาวเวอร์คอร์ด:</b> ทาบนิ้วเดียวบนสาย 6-5-4 เฟร็ตเดียวกัน เลื่อนขึ้นลงได้ทันที</div>
+<div class="row"><select id="cc" onchange="dd()">${opts(Object.keys(CH))}</select></div><div class="cmp" id="ddOut"></div>
+<h3>เวลาดรอปจะเกิดอะไรขึ้น</h3>
+<div class="box warn"><ul><li>สายหย่อนลง เสียงทุ้มและนุ่มขึ้น แต่สายอาจฟ่อ/เด้งชนเฟร็ต โดยเฉพาะตีแรง</li><li>สายเทนชันลดลง คอและแผ่นหน้าตึงน้อยลง ไม่อันตรายต่อตัวกีต้าร์</li><li>อินโทเนชันอาจเพี้ยน ควรเช็คเสียงเฟร็ต 12 และตั้งสายใหม่ซ้ำ ๆ เพราะสายยืด</li><li>ถ้าดรอปบ่อยหรือลงหลายเสียง ใช้สายเกจหนักขึ้น (เช่น .011 หรือ .012) และอาจปรับ truss rod</li><li><b>ห้ามขึ้นสายเกินปกติ</b> สายอาจขาด ไล่ขึ้นช้า ๆ ใช้จูนเนอร์ช่วย</li><li>สายเปลี่ยนไปแล้ว ตัวโน้ตที่อ่านจากแท็บ (TAB) ยังอ่านเลขเฟร็ตได้เหมือนเดิม แต่เสียงจะต่ำลง</li></ul></div>
+<h3>วิธีจูนเป็น Drop D</h3><ol><li>จูนมาตรฐานก่อน</li><li>ลดสาย 6 ลงจนเสียงตรงกับสาย 4 แต่ต่ำกว่า 1 อ็อกเทฟ</li><li>เช็ค: กดสาย 5 เฟร็ต 5 ต้องเสียง = สาย 4... ยกเว้นสาย 6 เปล่า = สาย 4 เฟร็ต 0 ต่ำลง 2 อ็อกเทฟ (ใช้จูนเนอร์แม่นสุด)</li></ol>`,
+ after:()=>{window.dd=()=>{const f=CH[cc.value],d=f.map((v,i)=>i==0&&v>=0?v+2:v);
+ ddOut.innerHTML=`<div class="ch"><b>มาตรฐาน</b>${chordSVG(f)}<small>${f.map(x=>x<0?'x':x)}</small></div><div class="ch"><b>Drop D</b>${chordSVG(d)}<small>${d.map(x=>x<0?'x':x)}</small></div>`};dd()}},
+
+{id:'scales',i:'🪜',t:'สเกลและการไล่สเกล',d:'เลือกคีย์ + สเกล เห็นบนฟิงเกอร์บอร์ด',h:()=>`
+<div class="row"><select id="sr" onchange="sc()">${opts(N)}</select><select id="ss" onchange="sc()">${opts(Object.keys(SC))}</select><select id="st" onchange="sc()"><option value="std">ตั้งสายมาตรฐาน</option><option value="dropd">Drop D</option></select></div>
+<div class="scroll" id="scOut"></div><p id="scTxt"></p>
+<h3>วิธีฝึกไล่สเกล</h3><ul><li>เริ่มจาก <b>A เพนทาโทนิกไมเนอร์</b> (เฟร็ต 5): สาย 6 เฟร็ต 5,8 · สาย 5 เฟร็ต 5,7 · สาย 4 เฟร็ต 5,7 · สาย 3 เฟร็ต 5,7 · สาย 2 เฟร็ต 5,8 · สาย 1 เฟร็ต 5,8</li><li>ใช้นิ้วชี้, นาง, ก้อย สลับกันอย่างเป็นระเบียบ 1 นิ้ว = 1 เฟร็ต</li><li>ไล่ขึ้น–ลงตามเมโทรนอม 60 → เพิ่มทีละ 5 BPM</li><li>ใช้ alternate picking (ลง–ขึ้น สลับ) เสมอ</li><li>ไล่ทั้งขึ้นและลงให้ได้ ก่อนเพิ่มความเร็ว</li></ul>`,
+ after:()=>{window.sc=()=>{O=OPEN[st.value];const r=N.indexOf(sr.value),iv=SC[ss.value];
+ scOut.innerHTML=fretboard(n=>{const k=(n-r+12)%12;return iv.includes(k)?N[n]:null},r);
+ scTxt.innerHTML='โน้ต: <b>'+iv.map(k=>N[(r+k)%12]).join(' – ')+'</b> (จุดสีส้ม = โน้ตราก)'};sc()}},
+
+{id:'practice',i:'⏱️',t:'ตารางฝึกซ้อม',d:'แผน 30 นาทีต่อวัน',h:()=>`
+<table><tr><th>เวลา</th><th>ทำอะไร</th></tr><tr><td>5 นาที</td><td style="white-space:normal;text-align:left">วอร์มอัพ: ไล่นิ้ว 1-2-3-4 ทุกสาย (spider)</td></tr>
+<tr><td>10 นาที</td><td style="white-space:normal;text-align:left">คอร์ด + เปลี่ยนคอร์ดตามเมโทรนอม</td></tr><tr><td>8 นาที</td><td style="white-space:normal;text-align:left">สเกล / ริฟฟ์ / เล่นตามเพลง</td></tr>
+<tr><td>7 นาที</td><td style="white-space:normal;text-align:left">เล่นเพลงที่ชอบหรือฝึกหูฟังแกะเพลง</td></tr></table>
+<h3>หลักการ</h3><ul><li>ซ้อมสั้นทุกวัน ดีกว่ายาวสัปดาห์ละครั้ง</li><li>ช้า → ถูก → ค่อยเร็ว</li><li>อัดเสียงตัวเองฟังย้อนหลัง</li><li>ปวดนิ้วปกติใน 2–3 สัปดาห์แรก แต่ถ้าปวดข้อมือหรือเสียวให้หยุดพัก</li></ul>`},
+
+{id:'tips',i:'💡',t:'สิ่งที่ควรรู้',d:'คาโป้ แท็บ ดูแลกีต้าร์ เปลี่ยนสาย',h:()=>`
+<h3>อ่านแท็บ (TAB)</h3><div class="box">6 เส้น = 6 สาย (เส้นล่างสุด = สาย 6) ตัวเลข = เฟร็ตที่กด<pre style="margin:6px 0">e|---0---3---|
+B|---1---0---|
+G|---0---0---|
+D|---2---0---|
+A|---3---2---|
+E|-------3---|</pre></div>
+<h3>คาโป้ (Capo)</h3><p>หนีบที่เฟร็ตหนึ่งเพื่อเลื่อนคีย์โดยใช้ทรงเดิม เช่น คาโป้เฟร็ต 2 + ทรง G = เสียง A</p>
+<h3>ดูแลกีต้าร์</h3><ul><li>เปลี่ยนสายทุก 2–3 เดือน หรือเมื่อเสียงแห้ง</li><li>เช็ดสายหลังเล่น เก็บในที่ไม่ร้อน/ชื้นจัด</li><li>ถ้าสายสูงเกินไปควรให้ช่างเซ็ตอัพ (action, truss rod)</li></ul>
+<h3>ศัพท์ควรรู้</h3><ul><li><b>Hammer-on / Pull-off</b> ใช้นิ้วเคาะ/ดึงให้เกิดเสียงโดยไม่ดีด</li><li><b>Bend</b> ดันสายให้สูงขึ้น · <b>Slide</b> ไถนิ้ว · <b>Vibrato</b> สั่นสาย</li><li><b>Barre</b> ทาบนิ้วชี้ข้ามทุกสาย · <b>Palm mute</b> วางสันมือขวาที่สะพานสาย</li></ul>`},
+
+{id:'ask',i:'💬',t:'ถามคำถาม / เสนอหัวข้อ',d:'บอกว่าอยากเรียนอะไรเพิ่ม',h:()=>`
+<p>อยากให้เพิ่มหัวข้ออะไร พิมพ์ได้เลย</p><textarea id="fb" rows="4" style="width:100%" maxlength="500"></textarea>
+<div class="row"><button class="b" onclick="sendFb()">ส่ง</button></div><p id="fbMsg"></p>`,
+ after:()=>{window.sendFb=async()=>{const t=fb.value.trim();if(!t)return;
+ if(!db){fbMsg.textContent='ยังไม่ได้เชื่อม Firebase';return}
+ try{await addDoc(collection(db,'feedback'),{text:t,uid,createdAt:serverTimestamp()});fb.value='';fbMsg.textContent='ส่งแล้ว ขอบคุณครับ ✅'}catch(e){fbMsg.textContent='ส่งไม่สำเร็จ'}}}}
+];
+
+/* ============ UI ============ */
+const menu=document.getElementById('menu'),modal=document.getElementById('modal'),sheet=document.getElementById('sheet');
+function renderMenu(){menu.innerHTML=S.map(s=>`<button class="card" data-id="${s.id}">${progress[s.id]?'<span class="done">✓</span>':''}<i>${s.i}</i><b>${s.t}</b><span>${s.d}</span></button>`).join('')}
+function open_(id){const s=S.find(x=>x.id==id);
+  sheet.innerHTML=`<div class="top"><h2>${s.i} ${s.t}</h2><button class="x" id="cl">✕</button></div>${s.h()}
+  ${id!='ask'?`<label class="mark"><input type="checkbox" id="mk" ${progress[id]?'checked':''}> เรียนหัวข้อนี้แล้ว</label>`:''}`;
+  modal.classList.add('on');sheet.scrollTop=0;s.after&&s.after();
+  document.getElementById('cl').onclick=close_;
+  const mk=document.getElementById('mk');if(mk)mk.onchange=()=>{progress[id]=mk.checked;save();renderMenu()}}
+function close_(){modal.classList.remove('on')}
+menu.onclick=e=>{const c=e.target.closest('.card');if(c)open_(c.dataset.id)};
+modal.onclick=e=>{if(e.target==modal)close_()};
+document.onkeydown=e=>{if(e.key=='Escape')close_()};
+renderMenu();
+</script>
+</body>
+</html>
